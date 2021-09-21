@@ -121,7 +121,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
             }
 
             // git checkout -b ... develop
-            gitCreateAndCheckout(
+            createAndCheckoutAndSetConfigForBranch(
+                    BranchType.FEATURE,
                     gitFlowConfig.getFeatureBranchPrefix() + featureBranchName,
                     gitFlowConfig.getDevelopmentBranch());
 
