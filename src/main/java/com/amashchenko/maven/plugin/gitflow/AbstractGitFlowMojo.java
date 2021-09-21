@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 
@@ -30,6 +31,7 @@ import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -91,7 +93,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     @Parameter(defaultValue = "false")
     protected boolean tychoBuild;
-    
+
     /**
      * Whether to call Maven install goal during the mojo execution.
      * 
@@ -125,6 +127,13 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     private String argLine;
 
     /**
+     * Stores the original argLine.
+     * If branch based properties are needed, this will be used as reference
+     * for the argLine manipulation.
+     */
+    private String argLineOrig;
+
+    /**
      * Whether to make a GPG-signed commit.
      * 
      * @since 1.9.0
@@ -150,6 +159,70 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     private String versionProperty;
 
     /**
+     * Property to treat as <code>changelist</code> property.
+     * Used for Maven CI friendly versioning handling. Only relevant in conjunction
+     * with the <code>xxxChangelistValue</code>'s.
+     * 
+     * @since 1.17.0
+     */
+    @Parameter(property = "changelistProperty", defaultValue = "changelist")
+    private String changelistProperty;
+
+    /**
+     * The value to pass as <code>changelist</code> value when running on the
+     * production branch.
+     * 
+     * @since 1.17.0
+     */
+    @Parameter(property = "productionChangelistValue")
+    private String productionChangelistValue;
+
+    /**
+     * The value to pass as <code>changelist</code> value when running on the
+     * hotfix branch.
+     * 
+     * @since 1.17.0
+     */
+    @Parameter(property = "hotfixChangelistValue")
+    private String hotfixChangelistValue;
+
+    /**
+     * The value to pass as <code>changelist</code> value when running on the
+     * release branch.
+     * 
+     * @since 1.17.0
+     */
+    @Parameter(property = "releaseChangelistValue")
+    private String releaseChangelistValue;
+
+    /**
+     * The value to pass as <code>changelist</code> value when running on the
+     * development branch.
+     * 
+     * @since 1.17.0
+     */
+    @Parameter(property = "developmentChangelistValue")
+    private String developmentChangelistValue;
+
+    /**
+     * The value to pass as <code>changelist</code> value when running on the
+     * feature branch.
+     * 
+     * @since 1.17.0
+     */
+    @Parameter(property = "featureChangelistValue")
+    private String featureChangelistValue;
+
+    /**
+     * The value to pass as <code>changelist</code> value when running on the
+     * support branch.
+     * 
+     * @since 1.17.0
+     */
+    @Parameter(property = "supportChangelistValue")
+    private String supportChangelistValue;
+
+    /**
      * Whether to skip updating version. Useful with {@link #versionProperty} to be
      * able to update <code>revision</code> property without modifying version tag.
      * 
@@ -171,6 +244,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     @Parameter(property = "mvnExecutable")
     private String mvnExecutable;
+
     /**
      * The path to the Git executable. Defaults to "git".
      */
@@ -191,7 +265,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     @Component
     protected ProjectBuilder projectBuilder;
-    
+
     /** Default prompter. */
     @Component
     protected Prompter prompter;
@@ -611,7 +685,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void gitCheckout(final String branchName)
+    private void gitCheckout(final String branchName)
             throws MojoFailureException, CommandLineException {
         getLog().info("Checking out '" + branchName + "' branch.");
 
@@ -628,7 +702,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void gitCreateAndCheckout(final String newBranchName,
+    private void gitCreateAndCheckout(final String newBranchName,
             final String fromBranchName) throws MojoFailureException,
             CommandLineException {
         getLog().info(
@@ -1288,5 +1362,192 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     public void setArgLine(String argLine) {
         this.argLine = argLine;
+        this.argLineOrig = argLine;
+    }
+
+    /**
+     * Executes git checkout and sets Maven CI friendly settings per branch.
+     * 
+     * @param branchType
+     *            Branch type to set config for.
+     * @param branchName
+     *            Branch name to checkout.
+     * @throws MojoExecutionException
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void checkoutAndSetConfigForBranch(final BranchType branchType, final String branchName)
+            throws MojoExecutionException, MojoFailureException, CommandLineException {
+        if (branchType == null) {
+            throw new MojoExecutionException("INTERNAL: given BranchType is null");
+        }
+
+        gitCheckout(branchName);
+        setConfigForBranchType(branchType);
+    }
+
+    /**
+     * Executes git checkout -b and sets Maven CI friendly settings per branch.
+     * 
+     * @param branchType
+     *            Branch type to set config for.
+     * @param newBranchName
+     *            Create branch with this name.
+     * @param fromBranchName
+     *            Create branch from this branch.
+     * @throws MojoExecutionException
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void createAndCheckoutAndSetConfigForBranch(final BranchType branchType, final String newBranchName,
+        final String fromBranchName) throws MojoExecutionException, MojoFailureException, CommandLineException {
+        if (branchType == null) {
+            throw new MojoExecutionException("INTERNAL: given BranchType is null");
+        }
+
+        gitCreateAndCheckout(newBranchName, fromBranchName);
+        setConfigForBranchType(branchType);
+    }
+
+    /**
+     * Sets Maven CI friendly settings dependent of the type of branch.
+     * 
+     * @param branchType
+     *            Branch type to set config for.
+     * @throws MojoExecutionException
+     */
+    protected void setConfigForBranchType(final BranchType branchType) throws MojoExecutionException {
+        if (branchType == null) {
+            throw new MojoExecutionException("INTERNAL: given BranchType is null");
+        }
+
+        final boolean noChangelistValueToBeModified = productionChangelistValue == null
+                && hotfixChangelistValue == null && releaseChangelistValue == null
+                && developmentChangelistValue == null && featureChangelistValue == null
+                && supportChangelistValue == null;
+
+        if (StringUtils.isBlank(changelistProperty) || noChangelistValueToBeModified) {
+            return;
+        }
+
+        switch (branchType) {
+            case PRODUCTION:
+                setChangelistPropertyToValue(productionChangelistValue);
+                break;
+            case HOTFIX:
+                setChangelistPropertyToValue(hotfixChangelistValue);
+                break;
+            case RELEASE:
+                setChangelistPropertyToValue(releaseChangelistValue);
+                break;
+            case DEVELOPMENT:
+                setChangelistPropertyToValue(developmentChangelistValue);
+                break;
+            case FEATURE:
+                setChangelistPropertyToValue(featureChangelistValue);
+                break;
+            case SUPPORT:
+                setChangelistPropertyToValue(supportChangelistValue);
+                break;
+        }
+    }
+
+    /**
+     * Sets the <code>changelist</code> property globally.
+     * 
+     * @param changelistPropertyValue
+     *            The value to set the <code>changelist</code> property to.
+     *            Remove the property if the value is null.
+     */
+    private void setChangelistPropertyToValue(final String changelistPropertyValue) {
+        setProperty(changelistProperty, changelistPropertyValue, mavenSession);
+    }
+
+    /**
+     * Sets a property globally in system-properties, optionally in the properties of the
+     * <code>MavenSession</code> and replaces the argLine to contain the value as well.
+     * 
+     * @param key
+     *            The key of the property to set.
+     * @param value
+     *            The value of the property to set, if null, the property gets removed.
+     * @param session
+     *            An optional <code>MavenSession</code> can be passed, to replace the properties
+     *            in it's property-lists.
+     */
+    private void setProperty(final String key, final String value, final MavenSession session) {
+        if (StringUtils.isBlank(key)) {
+            return;
+        }
+
+        if (session != null) {
+            setPropertyInProperties(key, value, session.getProjectBuildingRequest().getUserProperties());
+        }
+
+        argLine = replacePropertyInArgline(key, value, argLineOrig);
+    }
+
+    /**
+     * Sets a property in the <code>Properties</code>.
+     * Updates the <code>Properties</code> and  manipulate the <code>argLine</code> inside
+     * of the <code>Properties</code> as well.
+     * 
+     * @param key
+     *            The key of the property to set.
+     * @param value
+     *            The value of the property to set, if null, the property gets removed.
+     * @param properties
+     *            The properties where to replace the entry.
+     */
+    private void setPropertyInProperties(final String key, final String value, final Properties properties) {
+        if (StringUtils.isBlank(key) || properties == null) {
+            return;
+        }
+
+        final String argLineFromProperty = properties.getProperty("argLine");
+        final String replaced = replacePropertyInArgline(key, value, argLineFromProperty);
+
+        if (replaced == null) {
+            properties.remove("argLine");
+        } else {
+            properties.put("argLine", replaced);
+        }
+
+        if (value == null) {
+            properties.remove(key);
+        } else {
+            properties.put(key, value);
+        }
+    }
+
+    /**
+     * Replaces/sets a property in a argLine-String.
+     * 
+     * @param key
+     *            The key of the property to set.
+     * @param value
+     *            The value of the property to set, if null, the property gets removed.
+     * @param argLine
+     *            A argLine-representation used to replace the key.
+     * @return a new argLine where the property is replaced/set.
+     */
+    private String replacePropertyInArgline(final String key, final String value, final String argLine) {
+        final String javaProperty = "-D" + key + "=";
+        final String argLinePropertyRegex = javaProperty + "\\S*";
+        final String argLinePropertyReplacement = (value == null) ? "" : javaProperty + value;
+
+        if (StringUtils.isBlank(argLine) || !argLine.contains(javaProperty)) {
+            // noop: old argLine is empty or does not contain the property and no property to set
+            if (StringUtils.isBlank(argLinePropertyReplacement)) {
+                return argLine;
+            // append: old argLine is empty or does not contain the property and property to set
+            } else {
+                final String argLineReadyToAppend = StringUtils.isBlank(argLine) ? "" : argLine + " ";
+                return argLineReadyToAppend + argLinePropertyReplacement;
+            }
+        // replace or remove: old argLine contains property, replacement: new or empty
+        } else {
+            return argLine.replaceAll(argLinePropertyRegex, argLinePropertyReplacement);
+        }
     }
 }
