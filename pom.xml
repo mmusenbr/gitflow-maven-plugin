@@ -17,7 +17,7 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.amashchenko.maven.plugin</groupId>
+    <groupId>com.musenbrock</groupId>
     <artifactId>gitflow-maven-plugin</artifactId>
     <packaging>maven-plugin</packaging>
     <name>gitflow-maven-plugin</name>
@@ -39,14 +39,17 @@
         <developer>
             <name>Aleksandr Mashchenko</name>
         </developer>
+        <developer>
+            <name>Michael Musenbrock</name>
+        </developer>
     </developers>
 
-    <url>https://github.com/aleksandr-m/gitflow-maven-plugin</url>
+    <url>https://github.com/mmusenbr/gitflow-maven-plugin</url>
 
     <scm>
-        <url>https://github.com/aleksandr-m/gitflow-maven-plugin</url>
-        <connection>scm:git:git@github.com:aleksandr-m/gitflow-maven-plugin.git</connection>
-        <developerConnection>scm:git:git@github.com:aleksandr-m/gitflow-maven-plugin.git</developerConnection>
+        <url>https://github.com/mmusenbr/gitflow-maven-plugin</url>
+        <connection>scm:git:git@github.com:mmusenbr/gitflow-maven-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:mmusenbr/gitflow-maven-plugin.git</developerConnection>
     </scm>
 
     <distributionManagement>
@@ -63,7 +66,7 @@
     </distributionManagement>
 
     <properties>
-        <revision>1.17.0</revision>
+        <revision>1.17.0.mmusenbr</revision>
         <changelist>-SNAPSHOT</changelist>
 
         <java.version>1.7</java.version>

@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     
     <parent>
-        <groupId>com.amashchenko.maven.plugin</groupId>
+        <groupId>com.musenbrock</groupId>
         <artifactId>gitflow-maven-test</artifactId>
         <version>1.0</version>
     </parent>
@@ -13,7 +13,7 @@
     <dependencyManagement>
         <dependencies>
                 <dependency>
-                    <groupId>com.amashchenko.maven.plugin</groupId>
+                    <groupId>com.musenbrock</groupId>
                     <artifactId>gitflow-maven-test-child1</artifactId>
                     <version>${test.project.version}</version>
                     <type>pom</type>

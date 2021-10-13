@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.amashchenko.maven.plugin.gitflow;
+// Re-structured for fork. Originally distributed as package: com.amashchenko.maven.plugin.gitflow
+package com.musenbrock.gitflow;
 
 import java.util.List;
 

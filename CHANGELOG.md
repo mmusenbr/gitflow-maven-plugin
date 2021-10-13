@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.17.0.mmusenbr (2021-10-13)
+
+* Forked from [com.amashchenko.maven.plugin.gitflow-maven-plugin](https://github.com/aleksandr-m/gitflow-maven-plugin) to [com.musenbrock.gitflow-maven-plugin](https://github.com/mmusenbr/gitflow-maven-plugin)
+
 ## v1.17.0 (2021-12-07)
 
 * Fixed and improved error messages in `feature-start` goal - [#306](https://github.com/aleksandr-m/gitflow-maven-plugin/issues/306)
